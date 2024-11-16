@@ -175,6 +175,9 @@ fn gen_init(rootfs: &Path) -> Result<(NamedTempFile, PathBuf)> {
     let mut host_dest_dir = rootfs.to_path_buf().into_os_string();
     host_dest_dir.push(&guest_temp_dir);
 
+    std::fs::create_dir_all(&host_dest_dir)
+        .context("Failed to create tempdir")?;
+
     let mut host_init = Builder::new()
         .prefix("vmtest-init")
         .suffix(".sh")
