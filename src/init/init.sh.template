@@ -55,7 +55,7 @@ fi
 
 log "Mounting tmpfs at /run"
 mount -t tmpfs -o nosuid,nodev tmpfs /run
-ln -s /var/run ../run
+ln -s /run /var/run
 
 log "Mounting sysfs at /sys"
 mount -t sysfs -o nosuid,nodev,noexec sys /sys
