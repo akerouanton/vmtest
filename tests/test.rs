@@ -38,7 +38,7 @@ fn test_run() {
     };
     let (vmtest, _dir) = setup(config, &["main.sh"]);
     let ui = Ui::new(vmtest);
-    let failed = ui.run(false);
+    let failed = ui.run(false, false);
     assert_eq!(failed, 0);
 }
 
@@ -72,7 +72,7 @@ fn test_run_multiple_return_number_failures() {
     };
     let (vmtest, _dir) = setup(config, &["main.sh"]);
     let ui = Ui::new(vmtest);
-    let failed = ui.run(false);
+    let failed = ui.run(false, false);
     assert_eq!(failed, 2);
 }
 
@@ -90,7 +90,7 @@ fn test_run_single_return_number_return_code() {
     };
     let (vmtest, _dir) = setup(config, &["main.sh"]);
     let ui = Ui::new(vmtest);
-    let failed = ui.run(false);
+    let failed = ui.run(false, false);
     assert_eq!(failed, 12);
 }
 
@@ -108,7 +108,7 @@ fn test_vmtest_infra_error() {
     };
     let (vmtest, _dir) = setup(config, &["main.sh"]);
     let ui = Ui::new(vmtest);
-    let failed = ui.run(false);
+    let failed = ui.run(false, false);
     assert_eq!(failed, 69);
 }
 

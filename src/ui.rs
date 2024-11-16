@@ -50,6 +50,7 @@ impl Stage {
     /// By taking ownership of the old stage, we defuse this footgun through
     /// the API.
     fn new(term: Term, heading: &str, previous: Option<Stage>) -> Self {
+        let expand = previous.as_ref().map_or(false, |previous: &Stage| previous.expand);
         drop(previous);
 
         // I don't see how writing to terminal could fail, but if it does,
@@ -59,7 +60,7 @@ impl Stage {
         Self {
             term,
             lines: Vec::new(),
-            expand: false,
+            expand: expand,
         }
     }
 
@@ -68,7 +69,7 @@ impl Stage {
     /// We kinda hack this to return 1 if we're not writing to terminal.
     /// Should really find a cleaner solution.
     fn window_size(&self) -> usize {
-        if self.term.features().is_attended() {
+        if self.term.features().is_attended() && !self.expand {
             min(self.lines.len(), WINDOW_LENGTH)
         } else {
             min(self.lines.len(), 1)
@@ -87,7 +88,9 @@ impl Stage {
         assert!(line.lines().count() <= 1, "Multiple lines provided");
 
         // Clear previously visible lines
-        clear_last_lines(&self.term, self.window_size());
+        if !self.expand {
+            clear_last_lines(&self.term, self.window_size());
+        }
 
         // Compute new visible lines
         let trimmed_line = line.trim_end();
@@ -124,7 +127,10 @@ impl Stage {
 
 impl Drop for Stage {
     fn drop(&mut self) {
-        clear_last_lines(&self.term, self.window_size());
+        if !self.expand {
+            clear_last_lines(&self.term, self.window_size());
+        }
+
         if self.expand && self.term.features().is_attended() {
             for line in &self.lines {
                 self.term
@@ -161,12 +167,16 @@ impl Ui {
     ///
     /// Returns an Error if the vm failed to run the command.
     /// Otherwise, return the return code of the command.
-    fn target_ui(updates: Receiver<Output>, target: String, show_cmd: bool) -> Result<i32> {
+    fn target_ui(updates: Receiver<Output>, target: String, show_cmd: bool, show_full: bool) -> Result<i32> {
         let term = Term::stdout();
         let mut stage = Stage::new(term.clone(), &heading(&target, 1), None);
         let mut stages = 0;
         let mut errors = 0;
         let mut rc: i32 = 0;
+
+        if show_full {
+            stage.expand(true);
+        }
 
         // Main state machine loop
         loop {
@@ -236,7 +246,9 @@ impl Ui {
 
         // Only clear target stages if target was successful
         if errors == 0 && !show_cmd {
-            clear_last_lines(&term, stages);
+            if !show_full {
+                clear_last_lines(&term, stages);
+            }
             term.write_line("PASS").expect("Failed to write terminal");
         } else if !show_cmd {
             term.write_line("FAILED").expect("Failed to write terminal");
@@ -258,7 +270,7 @@ impl Ui {
     /// In one-liner mode, it return the return code of the command, or EX_UNAVAILABLE if there
     /// is an issue that prevents running the command.
     /// When multiple targets are ran, it returns how many targets failed.
-    pub fn run(self, show_cmd: bool) -> i32 {
+    pub fn run(self, show_cmd: bool, show_full: bool) -> i32 {
         let mut failed = 0;
         let targets = self.vmtest.targets();
         let single_cmd = targets.len() == 1;
@@ -268,7 +280,7 @@ impl Ui {
 
             // Start UI on its own thread b/c `Vmtest::run_one()` will block
             let name = target.name.clone();
-            let ui = thread::spawn(move || Self::target_ui(receiver, name, show_cmd));
+            let ui = thread::spawn(move || Self::target_ui(receiver, name, show_cmd, show_full));
 
             // Run a target
             self.vmtest.run_one(idx, sender);

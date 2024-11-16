@@ -47,6 +47,9 @@ struct Args {
     /// Command to run in kernel mode. `-` to get an interactive shell.
     #[clap(conflicts_with = "config")]
     command: Vec<String>,
+    /// Show the full output of all the execution stages.
+    #[clap(long)]
+    log_full: bool,
 }
 
 /// A type representing a log that creates the associated file lazily
@@ -155,7 +158,7 @@ fn main() -> Result<()> {
     init_logging().context("Failed to initialize logging")?;
     let vmtest = config(&args)?;
     let ui = Ui::new(vmtest);
-    let rc = ui.run(show_cmd(&args));
+    let rc = ui.run(show_cmd(&args), args.log_full);
 
     exit(rc);
 }
