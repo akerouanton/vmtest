@@ -354,7 +354,7 @@ fn uefi_firmware_args(bios: Option<&Path>) -> Vec<OsString> {
 /// Generate which serial device to use based on the architecture used.
 fn console_device(arch: &str) -> String {
     match arch {
-        "aarch64" => "ttyAMA0".into(),
+        "aarch64" => "hvc0".into(),
         _ => "0".into(),
     }
 }
@@ -391,10 +391,10 @@ fn kernel_args(
     cmdline.push("rw".into());
 
     // Show as much console output as we can bear
-    cmdline.push(format!("earlyprintk=serial,{},115200", console_device(arch)).into());
+    cmdline.push(format!("earlyprintk=serial,{}", console_device(arch)).into());
     // Disable userspace writing ratelimits
     cmdline.push("printk.devkmsg=on".into());
-    cmdline.push(format!("console={},115200", console_device(arch)).into());
+    cmdline.push(format!("console={}", console_device(arch)).into());
     cmdline.push("loglevel=7".into());
 
     // We are not using RAID and this will help speed up boot
@@ -668,8 +668,7 @@ impl Qemu {
 
         c.args(QEMU_DEFAULT_ARGS)
             .stderr(Stdio::piped())
-            .arg("-serial")
-            .arg("mon:stdio")
+            .args(&["-chardev", "stdio,id=virtiocon0", "-device", "virtio-serial", "-device", "virtconsole,chardev=virtiocon0,name=console0"])
             .args(kvm_args(&target.arch))
             .args(machine_args(&target.arch))
             .args(machine_protocol_args(&qmp_sock))
