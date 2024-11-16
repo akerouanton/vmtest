@@ -55,9 +55,9 @@ impl QgaWrapper {
     /// Create a new `QgaWrapper`
     ///
     /// `sock` is the path to the QGA socket.
-    /// `has_kvm` whether or not host supports KVM
-    pub fn new(sock: &Path, has_kvm: bool) -> Result<Self> {
-        let timeout = if has_kvm {
+    /// `has_accel` whether or not host supports KVM or HVF acceleration.
+    pub fn new(sock: &Path, has_accel: bool) -> Result<Self> {
+        let timeout = if has_accel {
             KVM_TIMEOUT
         } else {
             EMULATE_TIMEOUT

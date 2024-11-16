@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use std::collections::HashMap;
 use std::env;
-use std::env::consts::ARCH;
+use std::env::consts::{ARCH, OS};
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::hash::Hash;
@@ -116,6 +116,10 @@ fn get_templates() -> TinyTemplate<'static> {
 /// Whether or not the host supports KVM
 fn host_supports_kvm(arch: &str) -> bool {
     arch == ARCH && Path::new("/dev/kvm").exists()
+}
+
+fn host_supports_hvf() -> bool {
+    OS == "macos"
 }
 
 // Generate a path to a randomly named socket
@@ -257,6 +261,11 @@ fn kvm_args(arch: &str) -> Vec<&'static str> {
 
     if host_supports_kvm(arch) {
         args.push("-enable-kvm");
+        args.push("-cpu");
+        args.push("host");
+    } else if host_supports_hvf() {
+        args.push("-accel");
+        args.push("hvf");
         args.push("-cpu");
         args.push("host");
     } else {
@@ -1064,7 +1073,7 @@ impl Qemu {
         debug!("QMP info: {:#?}", qmp_info);
 
         // Connect to QGA socket
-        let qga = QgaWrapper::new(&self.qga_sock, host_supports_kvm(&self.arch));
+        let qga = QgaWrapper::new(&self.qga_sock, host_supports_kvm(&self.arch) || host_supports_hvf());
         let qga = match qga {
             Ok(q) => q,
             Err(e) => {
