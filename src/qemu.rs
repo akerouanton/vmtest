@@ -159,9 +159,15 @@ fn guest_init_path(guest_temp_dir: PathBuf, host_init_path: PathBuf) -> Result<P
 
 /// Generates init.sh that guest will use as pid 1
 fn init_script() -> String {
-    let path = match env::var("PATH") {
-        Ok(p) => p,
-        Err(_) => "/bin:/sbin:/usr/bin:/usr/sbin".to_string(),
+    let path = {
+        if OS == "macos" {
+            "/bin:/sbin:/usr/bin:/usr/sbin".to_string()
+        } else {
+            match env::var("PATH") {
+                Ok(p) => p,
+                Err(_) => "/bin:/sbin:/usr/bin:/usr/sbin".to_string(),
+            }
+        }
     };
 
     // Ignore errors cuz only trivial bugs are possible
